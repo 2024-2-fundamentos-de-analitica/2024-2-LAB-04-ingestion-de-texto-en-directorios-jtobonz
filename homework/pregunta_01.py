@@ -1,13 +1,39 @@
-# pylint: disable=import-outside-toplevel
-# pylint: disable=line-too-long
-# flake8: noqa
-"""
-Escriba el codigo que ejecute la accion solicitada en cada pregunta.
-"""
+import zipfile
+import os
+import pandas as pd
+import glob
 
 
-def pregunta_01():
-    """
+def unzip_file(zip_path, destination):
+    """Descomprime un archivo ZIP en la ruta especificada."""
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(destination)
+
+
+def ensure_directory_exists(directory_path):
+    """Crea un directorio si no existe."""
+    os.makedirs(directory_path, exist_ok=True)
+
+
+def build_dataset(source_folder, output_csv):
+    """Crea un dataset consolidado a partir de archivos de texto organizados en subdirectorios según su categoría."""
+    dataset = []
+    sentiment_classes = ['negative', 'neutral', 'positive']  # Categorías predefinidas
+
+    for sentiment in sentiment_classes:
+        text_files = glob.glob(os.path.join(source_folder, sentiment, '*'))
+        for file_path in text_files:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                text_content = file.read().strip()
+                dataset.append([text_content, sentiment])
+
+    # Convertir la lista en un DataFrame y exportarlo a CSV
+    df = pd.DataFrame(dataset, columns=['phrase', 'target'])  # Cambio de 'sentiment' a 'target'
+    df.to_csv(output_csv, index=False)
+
+    return df
+
+"""
     La información requerida para este laboratio esta almacenada en el
     archivo "files/input.zip" ubicado en la carpeta raíz.
     Descomprima este archivo.
@@ -70,4 +96,28 @@ def pregunta_01():
     ```
 
 
+"""
+
+def pregunta_01():
     """
+    Realiza la extracción, procesamiento y generación de los archivos de dataset.
+    """
+
+    # Ruta del archivo ZIP de entrada
+    zip_file_path = 'files/input.zip'
+    extraction_path = 'files'
+
+    # Extraer el contenido del ZIP
+    unzip_file(zip_file_path, extraction_path)
+
+    # Crear la carpeta de salida si no existe
+    output_folder = 'files/output'
+    ensure_directory_exists(output_folder)
+
+    # Procesar y generar los datasets
+    train_dataset = build_dataset(os.path.join(extraction_path, 'input/train'),
+                                  os.path.join(output_folder, 'train_dataset.csv'))
+    test_dataset = build_dataset(os.path.join(extraction_path, 'input/test'),
+                                 os.path.join(output_folder, 'test_dataset.csv'))
+
+    return train_dataset, test_dataset
